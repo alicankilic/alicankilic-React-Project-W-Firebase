@@ -9,6 +9,8 @@ import Checkout from "./Checkout";
 const Cart = (props) => {
   const cartCtx = useContext(CartContext);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isSubmittingState, setIsSubmittingState] = useState(false);
+  const [didSubmit, setDidSubmit] = useState(false);
   const totalAmount = `$${cartCtx.totalAmount.toFixed(2)}`;
   const hasItems = cartCtx.items.length > 0;
 
@@ -18,6 +20,21 @@ const Cart = (props) => {
 
   const cartItemAddHandler = (item) => {
     cartCtx.addItem(item);
+  };
+
+  const submitOrderHndler = async (usrData) => {
+    setIsSubmittingState(true);
+    const response = await fetch(
+      "https://react2-4faad-default-rtdb.europe-west1.firebasedatabase.app/orders.json",
+      {
+        method: "POST",
+        body: JSON.stringify({ user: usrData, orderedItems: cartCtx.items }),
+      }
+    );
+    if (response.ok) {
+      setIsSubmittingState(false);
+      setDidSubmit(true);
+    }
   };
 
   const cartItems = (
@@ -39,14 +56,16 @@ const Cart = (props) => {
     setIsCheckingOut(true);
   };
 
-  return (
-    <Modal onClose={props.onClose}>
+  const cartModalContent = (
+    <>
       {cartItems}
       <div className={classes.total}>
         <span>Total Amount</span>
         <span>{totalAmount}</span>
       </div>
-      {isCheckingOut ? <Checkout onCancel={props.onClose} /> : undefined}
+      {isCheckingOut ? (
+        <Checkout onConfirm={submitOrderHndler} onCancel={props.onClose} />
+      ) : undefined}
       {!isCheckingOut ? (
         <div className={classes.actions}>
           <button className={classes["button--alt"]} onClick={props.onClose}>
@@ -59,6 +78,17 @@ const Cart = (props) => {
           )}
         </div>
       ) : undefined}
+    </>
+  );
+
+  const isSubmittingModalContent = <p>Sending Order Data ...</p>;
+  const didSubmitModalContent = <p>We Took Your Order !</p>;
+
+  return (
+    <Modal onClose={props.onClose}>
+      {!isSubmittingState && !didSubmit ? cartModalContent : undefined}
+      {isSubmittingState ? isSubmittingModalContent : undefined}
+      {!isSubmittingState && didSubmit ? didSubmitModalContent : undefined}
     </Modal>
   );
 };
